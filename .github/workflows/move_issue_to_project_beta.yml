@@ -1,0 +1,145 @@
+name: Add issue to project beta
+
+on:
+  workflow_call:
+    inputs:
+      project_number:
+        required: true
+      assignee:
+        required: true
+    secrets:
+      github_token:
+        required: true
+	
+jobs:
+  track_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - shell: bash
+        env:
+          BABS_FILE: ${{ github.workspace }}/.babs
+        run: |
+          value=31
+          echo "project_number=$value" >> $GITHUB_ENV
+          babs () { sed -n  "s/ *$1: *//p" $2;}
+          echo "BABS_LAB=$(babs Lab $BABS_FILE)" >> $GITHUB_ENV
+          echo "BABS_SCIENTIST=$(babs Scientist $BABS_FILE)" >> $GITHUB_ENV
+          echo "BABS_PROJECT_TITLE=$(babs Project $BABS_FILE)" >> $GITHUB_ENV
+          cat $BABS_FILE
+          
+      - name: Get project data
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          ORGANIZATION: BABS-STP
+          PROJECT_NUMBER: ${{ env.project_number }}
+        run: |
+          gh api graphql -f query='
+            query($org: String!, $number: Int!) {
+              organization(login: $org){
+                projectNext(number: $number) {
+                  id  
+                  fields(first:20) {
+                    nodes {
+                      id
+                      name
+                      settings 
+                    }
+                  }
+                }
+              }
+            }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
+          echo 'PROJECT_ID='$(jq '.data.organization.projectNext.id' project_data.json) >> $GITHUB_ENV
+          echo 'PROJECT_TITLE_FIELD_ID='$(jq '.data.organization.projectNext.fields.nodes[] | select(.name== "Project title") | .id' project_data.json) >> $GITHUB_ENV
+          echo 'LAB_FIELD_ID='$(jq '.data.organization.projectNext.fields.nodes[] | select(.name== "Lab") | .id' project_data.json) >> $GITHUB_ENV
+          echo 'SCIENTIST_FIELD_ID='$(jq '.data.organization.projectNext.fields.nodes[] | select(.name== "Scientist") | .id' project_data.json) >> $GITHUB_ENV
+                  
+      - name: Add issue to project
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          item_id="$( gh api graphql -f query='
+            mutation($project:ID!, $issue:ID!) {
+              addProjectNextItem(input: {projectId: $project, contentId: $issue}) {
+                projectNextItem {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f issue=$ISSUE_ID --jq '.data.addProjectNextItem.projectNextItem.id')"
+            
+            echo 'ITEM_ID='$item_id >> $GITHUB_ENV
+            
+      - shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          ITEM_ID: ${{ env.ITEM_ID }}
+          FIELD_ID: ${{ env.PROJECT_TITLE_FIELD_ID }}
+          VALUE: ${{ env.BABS_PROJECT_TITLE }}
+        run: |
+          echo $PROJECT_ID
+          echo $ITEM_ID
+          echo $FIELD_ID
+          echo $VALUE
+        
+      - name: Add babs project title custom field value
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token}}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          ITEM_ID: ${{ env.ITEM_ID }}
+          PROJECT_TITLE_FIELD_ID: ${{ env.PROJECT_TITLE_FIELD_ID }}
+          PROJECT_TITLE_VALUE: ${{ env.BABS_PROJECT_TITLE }}
+          LAB_FIELD_ID: ${{ env.LAB_FIELD_ID }}
+          LAB_VALUE: ${{ env.BABS_LAB }}
+          SCIENTIST_FIELD_ID: ${{ env.SCIENTIST_FIELD_ID }}
+          SCIENTIST_VALUE: ${{ env.BABS_SCIENTIST }}
+        run: |
+          gh api graphql -f query='
+            mutation(
+              $project: ID!
+              $item: ID!
+              $project_title_field: ID!
+              $project_title_value: String!
+              $lab_field: ID!
+              $lab_value: String!
+              $scientist_field: ID!
+              $scientist_value: String!
+            ) {
+              set_project_title: updateProjectNextItemField(
+                input: {
+                  projectId: $project
+                  itemId: $item
+                  fieldId: $project_title_field
+                  value: $project_title_value
+                }
+              ) {
+                projectNextItem {
+                  id
+                }
+              }
+              set_lab: updateProjectNextItemField(
+                input: {
+                  projectId: $project
+                  itemId: $item
+                  fieldId: $lab_field
+                  value: $lab_value
+                }
+              ) {
+                projectNextItem {
+                  id
+                }
+              }
+              set_scientist: updateProjectNextItemField(
+                input: {
+                  projectId: $project
+                  itemId: $item
+                  fieldId: $scientist_field
+                  value: $scientist_value
+                }
+              ) {
+                projectNextItem {
+                  id
+                }
+              }   
+          }' -f project=$PROJECT_ID -f item=$ITEM_ID -f project_title_field=$PROJECT_TITLE_FIELD_ID -f project_title_value=$PROJECT_TITLE_VALUE -f lab_field=$LAB_FIELD_ID -f lab_value=$LAB_VALUE -f scientist_field=$SCIENTIST_FIELD_ID -f scientist_value=$SCIENTIST_VALUE
