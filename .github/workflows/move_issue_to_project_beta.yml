@@ -1,7 +1,7 @@
 name: Add issue to project beta
 
 on:
-workflow_call:
+  workflow_call:
     inputs:
       project_number:
         required: true
