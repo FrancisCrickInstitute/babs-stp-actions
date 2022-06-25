@@ -10,7 +10,7 @@ on:
     secrets:
       github_token:
         required: true
-	
+
 jobs:
   track_issue:
     runs-on: ubuntu-latest
