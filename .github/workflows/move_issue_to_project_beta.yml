@@ -1,7 +1,7 @@
 name: Add issue to project beta
 
 on:
-  workflow_call:
+workflow_call:
     inputs:
       project_number:
         required: true
@@ -15,24 +15,22 @@ jobs:
   track_issue:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout caller repository
-      - uses actions/checkout@v3
-      	with:
-	  repository: 'FrancisCrickInstitute/babs-stp-actions'
-
-      - name: get project beta id
-      - shell: bash
-        env:
+      - name: checkout-babs-stp-actions
+	      uses: actions/checkout@v3
+        with:
+	        repository: FrancisCrickInstitute/babs-stp-actions
+   	
+      - name: get_project_beta_id
+	      env:
           PROJECT_BETA_ID_FILE: ${{ github.workspace }}/resources/babs-analyst-project-beta-ids.yml
-	  ASSIGNEE: ${{ inputs.assignee }}
-        run: |
-          get_project_id () { sed -n  "s/ *$1: *//p" $2;}
-	  echo "project_number=$(get_project_id $ASSIGEE $BABS_FILE)" >> $GITHUB_ENV
-
-      - name: checkout calling repo
+	        ASSIGNEE: ${{ inputs.assignee }}
+          run: |
+            get_project_id () { sed -n  "s/ *$1: *//p" $2;}
+	          echo "project_number=$(get_project_id $ASSIGEE $BABS_FILE)" >> $GITHUB_ENV
+	  
       - uses: actions/checkout@v3
+      
       - name: read .babs file
-      - shell: bash
         env:
           BABS_FILE: ${{ github.workspace }}/.babs
         run: |
