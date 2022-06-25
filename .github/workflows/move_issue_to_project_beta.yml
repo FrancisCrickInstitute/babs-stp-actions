@@ -15,7 +15,23 @@ jobs:
   track_issue:
     runs-on: ubuntu-latest
     steps:
+      - name: checkout caller repository
+      - uses actions/checkout@v3
+      	with:
+	  repository: 'FrancisCrickInstitute/babs-stp-actions'
+
+      - name: get project beta id
+      - shell: bash
+        env:
+          PROJECT_BETA_ID_FILE: ${{ github.workspace }}/resources/babs-analyst-project-beta-ids.yml
+	  ASSIGNEE: ${{ inputs.assignee }}
+        run: |
+          get_project_id () { sed -n  "s/ *$1: *//p" $2;}
+	  echo "project_number=$(get_project_id $ASSIGEE $BABS_FILE)" >> $GITHUB_ENV
+
+      - name: checkout calling repo
       - uses: actions/checkout@v3
+      - name: read .babs file
       - shell: bash
         env:
           BABS_FILE: ${{ github.workspace }}/.babs
@@ -27,7 +43,7 @@ jobs:
           echo "BABS_SCIENTIST=$(babs Scientist $BABS_FILE)" >> $GITHUB_ENV
           echo "BABS_PROJECT_TITLE=$(babs Project $BABS_FILE)" >> $GITHUB_ENV
           cat $BABS_FILE
-          
+
       - name: Get project data
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -69,20 +85,7 @@ jobs:
             }' -f project=$PROJECT_ID -f issue=$ISSUE_ID --jq '.data.addProjectNextItem.projectNextItem.id')"
             
             echo 'ITEM_ID='$item_id >> $GITHUB_ENV
-            
-      - shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.github_token }}
-          PROJECT_ID: ${{ env.PROJECT_ID }}
-          ITEM_ID: ${{ env.ITEM_ID }}
-          FIELD_ID: ${{ env.PROJECT_TITLE_FIELD_ID }}
-          VALUE: ${{ env.BABS_PROJECT_TITLE }}
-        run: |
-          echo $PROJECT_ID
-          echo $ITEM_ID
-          echo $FIELD_ID
-          echo $VALUE
-        
+
       - name: Add babs project title custom field value
         env:
           GITHUB_TOKEN: ${{ secrets.github_token}}
