@@ -21,18 +21,18 @@ jobs:
         repository: FrancisCrickInstitute/babs-stp-actions
         
     - name: get_project_beta_id
-      	env:
-          PROJECT_BETA_ID_FILE: ${{ github.workspace }}/resources/babs-analyst-project-beta-ids.yml
-	  ASSIGNEE: ${{ inputs.assignee }}
+      env:
+    	PROJECT_BETA_ID_FILE: ${{ github.workspace }}/resources/babs-analyst-project-beta-ids.yml
+	ASSIGNEE: ${{ inputs.assignee }}
 	run: |
    	  get_project_id () { sed -n  "s/ *$1: *//p" $2;}
 	  echo "project_number=$(get_project_id $ASSIGEE $BABS_FILE)" >> $GITHUB_ENN
 
     - uses: actions/checkout@v3
-    - name: read .babs file
-        env:
-          BABS_FILE: ${{ github.workspace }}/.babs
-        run: |
+    - name: read_.babs_file
+    env:
+        BABS_FILE: ${{ github.workspace }}/.babs
+   	run: |
           value=31
           echo "project_number=$value" >> $GITHUB_ENV
           babs () { sed -n  "s/ *$1: *//p" $2;}
