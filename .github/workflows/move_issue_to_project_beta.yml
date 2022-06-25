@@ -3,18 +3,17 @@ name: Add issue to project beta
 on:
   workflow_call:
     inputs:
-      project_number:
-        required: true
       assignee:
+        type: string
         required: true
     secrets:
-      github_token:
+      GITHUB_TOKEN:
         required: true
 
 jobs:
   track_issue:
-  runs-on: ubuntu-latest
-  steps:
+    runs-on: ubuntu-latest
+    steps:
     - name: checkout-babs-stp-actions
       uses: actions/checkout@v3
       with:
